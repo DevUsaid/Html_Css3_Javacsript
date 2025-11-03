@@ -1,0 +1,412 @@
+
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Tabs */
+    .visa-tabs {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin: 0 auto 30px;
+      position: relative;
+    }
+
+    .visa-tabs::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: #ccc;
+      z-index: 0;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: #9ca3af;
+      padding: 8px 18px;
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tab-btn.active {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      color: #111827;
+      font-weight: 700;
+      margin-bottom: -1px;
+      z-index: 2;
+    }
+
+    .tab-btn.active::after {
+      content: "";
+      position: absolute;
+      left: 20%;
+      bottom: 0;
+      width: 60%;
+      height: 3px;
+      background: #26C6DA;
+      border-radius: 2px;
+    }
+
+    /* Tab Content */
+    .tab-card { display: none; margin-top: 30px; }
+    .tab-card.active { display: block; }
+
+    /* E-Visa Plans */
+    .pricing-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      max-width: 1200px;
+      margin: 0 auto;
+      gap: 0;
+    }
+
+    .pricing-card {
+        margin-top: 40px;
+      background: white;
+      border-radius: 12px;
+      padding: 32px 24px;
+      border: 1px solid #e8eef5;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+
+    .pricing-card.professional {
+        margin-top: -0px;
+      border: 2px solid #3ec9f1;
+    }
+
+    .best-value {
+      font-family: 'Open Sans', sans-serif;
+      background-color: #3ec9f1;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      margin: -35px -24px 24px -24px;
+      border-radius: 12px 12px 0 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .plan-name {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .starting-text,
+    .period,
+    .features-list li {
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .starting-text { font-size: 12px; color: #7f8c9a; margin-bottom: 8px; }
+    .period { font-size: 12px; color: #7f8c9a; margin-bottom: 24px; }
+
+    .price-wrapper { font-family: 'Open Sans', sans-serif; }
+    .price { font-size: 36px; font-weight: 700; line-height: 1; }
+    .currency { font-size: 16px; font-weight: 600; margin-right: 2px; }
+
+    .features-list { list-style: none; padding: 0; }
+    .features-list li { font-size: 14px; color: #2c3e50; padding: 14px 0; text-align: center; }
+    .features-list li:not(:last-child) { border-bottom: 1px solid #f0f4f8; }
+
+    /* Book Now Button */
+    .book-btn {
+      background:#3ec9f1;
+      color:white;
+      border:none;
+      padding:10px 20px;
+      border-radius:6px;
+      cursor:pointer;
+      font-family:'Open Sans',sans-serif;
+      font-weight:600;
+      margin-top:20px;
+      text-decoration: none!important;
+      display: inline-block;
+    }
+
+   .book-btn:hover{
+       background: #3ec9f1!important;
+       color: #fff!important;
+   }
+    /* Sticker Visa Section */
+    .sticker-section { margin-top: 30px; }
+
+    .country-dropdown {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 30px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .dropdown-wrapper {
+      display: flex;
+      align-items: center;
+      position: relative;
+      width: fit-content;
+    }
+
+    .country-dropdown select {
+      padding: 10px 50px 10px 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      background: white;
+      width: 500px;
+    }
+
+    .selected-flag {
+      font-size: 28px;
+      line-height: 1;
+      position: absolute;
+      right: 12px;
+      pointer-events: none;
+    }
+
+    .sticker-card {
+      background: white;
+      border-radius: 12px;
+      padding: 32px 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 2px solid #3ec9f1;
+      position: relative;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .country-name{
+        font-size: 25px;
+        font-weight: bold;
+    }
+    @media (max-width: 768px) {
+      .pricing-container { grid-template-columns: 1fr; }
+      .sticker-card { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Tabs -->
+    <div class="visa-tabs">
+      <button class="tab-btn active" data-tab="evisa">Sticker Visa</button>
+      <button class="tab-btn" data-tab="sticker">E-Visa</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- E-Visa Tab -->
+      <div class="tab-card active" id="evisa">
+        <div class="pricing-container">
+
+          <!-- Starter Plan -->
+          <div class="pricing-card">
+            <div class="plan-name">Starter</div>
+            <div class="starting-text">Starting from</div>
+            <div class="price-wrapper">
+              <span class="currency">PKR</span><span class="price">20,000</span>
+            </div>
+            <div class="period">/ per person</div>
+            <ul class="features-list">
+              <li><strong>Basic</strong> Application Tracking</li>
+              <li><strong>48 hr</strong> Customer response</li>
+              <li><strong>PDF Guide</strong> for Interview Preparation</li>
+              <li style="text-decoration: line-through; color:#9ca3af;">Fast Processing</li>
+              <li style="text-decoration: line-through; color:#9ca3af;">Document Collection Service</li>
+              <li style="text-decoration: line-through; color:#9ca3af;">Emergency Support</li>
+              <li><strong>Basic</strong> Visa Approval Support</li>
+              <li><strong>1 Initial</strong> Consultation Session</li>
+              <li><strong>Standard</strong> Review</li>
+              <li><strong>Weekly</strong> Communication</li>
+            </ul>
+            <div style="text-align:center;">
+              <a href="https://hezekiahconsultancy.com/hezekiah-consultancy-customer-inquiry-form/" class="book-btn">Book Free Consultation</a>
+            </div>
+          </div>
+
+          <!-- Essential Plan -->
+          <div class="pricing-card">
+            <div class="plan-name">Essential</div>
+            <div class="starting-text">Starting from</div>
+            <div class="price-wrapper">
+              <span class="currency">PKR</span><span class="price">25,000</span>
+            </div>
+            <div class="period">/ per person</div>
+            <ul class="features-list">
+              <li><strong>Basic</strong> Application Tracking</li>
+              <li><strong>24 hr</strong> Customer response</li>
+              <li><strong>Basic Tips</strong> for Interview Preparation</li>
+              <li style="text-decoration: line-through; color:#9ca3af;">Fast Processing</li>
+              <li style="text-decoration: line-through; color:#9ca3af;">Document Collection Service</li>
+              <li style="text-decoration: line-through; color:#9ca3af;">Emergency Support</li>
+              <li><strong>Basic</strong> Visa Approval Support</li>
+              <li><strong>1 Initial</strong> Consultation Session</li>
+              <li><strong>Standard</strong> Review</li>
+              <li><strong>Weekly</strong> Communication</li>
+            </ul>
+            <div style="text-align:center;">
+              <a href="https://hezekiahconsultancy.com/hezekiah-consultancy-customer-inquiry-form/" class="book-btn">Book Free Consultation</a>
+            </div>
+          </div>
+
+          <!-- Professional Plan -->
+          <div class="pricing-card professional">
+            <div class="best-value">BEST VALUE</div>
+            <div class="plan-name">Professional</div>
+            <div class="starting-text">Starting from</div>
+            <div class="price-wrapper">
+              <span class="currency">PKR</span><span class="price">35,000</span>
+            </div>
+            <div class="period">/ per person</div>
+            <ul class="features-list">
+              <li><strong>Real time</strong> Application Tracking</li>
+              <li><strong>8 hr</strong> Customer response</li>
+              <li><strong>2 Mock Sessions</strong> for Interview Preparation</li>
+              <li><strong>Fast Processing</strong></li>
+              <li><strong>Document Collection Service</strong></li>
+              <li><strong>Emergency Support in business hours</strong></li>
+              <li><strong>Visa Approval Support</strong></li>
+              <li><strong>3 Consultation Sessions</strong></li>
+              <li><strong>Double Check</strong></li>
+              <li><strong>Daily Communication</strong></li>
+            </ul>
+            <div style="text-align:center;">
+              <a href="https://hezekiahconsultancy.com/hezekiah-consultancy-customer-inquiry-form/" class="book-btn">Book Free Consultation</a>
+            </div>
+          </div>
+
+          <!-- VIP Plan -->
+          <div class="pricing-card">
+            <div class="plan-name">VIP</div>
+            <div class="starting-text">Starting from</div>
+            <div class="price-wrapper">
+              <span class="currency">PKR</span><span class="price">50,000</span>
+            </div>
+            <div class="period">/ per person</div>
+            <ul class="features-list">
+              <li><strong>Live Updates on</strong> Application Tracking</li>
+              <li><strong>24/7</strong> Customer response</li>
+              <li><strong>Unlimited Sessions</strong> for Interview Preparation</li>
+              <li><strong>Fast Processing</strong></li>
+              <li><strong>Document Collection Service</strong></li>
+              <li><strong>24/7 Emergency Support</strong></li>
+              <li><strong>Premium</strong> Visa Approval Support</li>
+              <li><strong>Unlimited Consultation Sessions</strong></li>
+              <li><strong>Triple Verification</strong></li>
+              <li><strong>Daily Communication</strong></li>
+            </ul>
+            <div style="text-align:center;">
+              <a href="https://hezekiahconsultancy.com/hezekiah-consultancy-customer-inquiry-form/" class="book-btn">Book Free Consultation</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticker Visa Tab -->
+      <div class="tab-card" id="sticker">
+        <div class="sticker-section">
+          <div class="country-dropdown">
+            <label for="countrySelect">Select your E-Visa Destination Country:</label>
+            <div class="dropdown-wrapper">
+              <select id="countrySelect">
+                <option value="azerbaijan">Azerbaijan</option>
+                <option value="turkey">Turkey E-Visa</option>
+                <option value="singapore">Singapore</option>
+                <option value="thailand">Thailand</option>
+                <option value="malaysia-done">Malaysia E-Visa 1 Month (Done Base)</option>
+                <option value="malaysia">Malaysia E-Visa 1 Month</option>
+              </select>
+              <div class="selected-flag"></div>
+            </div>
+          </div>
+          <div id="cardContainer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const countries = {
+      azerbaijan: { name: 'Azerbaijan E-Visa', price: '18,000', flag: '🇦🇿' },
+      turkey: { name: 'Turkey E-Visa', price: '20,000', flag: '🇹🇷' },
+      singapore: { name: 'Singapore', price: '20,000', flag: '🇸🇬' },
+      thailand: { name: 'Thailand', price: '20,000', flag: '🇹🇭' },
+      'malaysia-done': { name: 'Malaysia E-Visa 1 Month (Done Base)', price: '30,000', flag: '🇲🇾' },
+      malaysia: { name: 'Malaysia E-Visa 1 Month', price: '15,000', flag: '🇲🇾' }
+    };
+
+    const tabBtns = document.querySelectorAll(".tab-btn");
+    const tabCards = document.querySelectorAll(".tab-card");
+    const countrySelect = document.getElementById('countrySelect');
+    const cardContainer = document.getElementById('cardContainer');
+
+    // Tab switching
+    tabBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        tabBtns.forEach(b => b.classList.remove("active"));
+        tabCards.forEach(c => c.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // Country dropdown change
+    countrySelect.addEventListener('change', (e) => {
+      cardContainer.innerHTML = '';
+      const flagElement = document.querySelector('.selected-flag');
+      
+      if (e.target.value && countries[e.target.value]) {
+        const country = countries[e.target.value];
+        flagElement.textContent = country.flag;
+        const card = document.createElement('div');
+        card.className = 'sticker-card';
+        card.innerHTML = `
+          <div class="best-value">BEST VALUE</div>
+          <div class="country-name">${country.name}</div>
+          <div class="starting-text">Starting from</div>
+          <div class="price-wrapper">
+            <span class="currency">PKR</span><span class="price">${country.price}</span>
+          </div>
+          <div class="period">/ per person</div>
+          <ul class="features-list">
+            <li><strong>Real time</strong> Application Tracking</li>
+            <li><strong>8 hr</strong> Customer response</li>
+            <li><strong>2 Mock Sessions</strong> for Interview Preparation</li>
+            <li><strong>Fast Processing</strong></li>
+            <li><strong>Document Collection Service</strong></li>
+            <li><strong>Emergency Support in business hours</strong></li>
+            <li><strong>Visa Approval Support</strong></li>
+            <li><strong>3 Consultation Sessions</strong></li>
+            <li><strong>Double Check</strong></li>
+            <li><strong>Daily Communication</strong></li>
+          </ul>
+          <div style="text-align:center;">
+            <a href="https://hezekiahconsultancy.com/hezekiah-consultancy-customer-inquiry-form/" class="book-btn">Book Free Consultation</a>
+          </div>
+        `;
+        cardContainer.appendChild(card);
+      } else {
+        flagElement.textContent = '';
+      }
+    });
+
+    // Show Azerbaijan by default
+    countrySelect.dispatchEvent(new Event('change'));
+  </script>
+</body>
+</html>

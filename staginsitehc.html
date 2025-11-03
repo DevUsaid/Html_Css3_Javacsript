@@ -1,0 +1,1886 @@
+<?php
+
+// ✅ Preload Elementor Hero (LCP) Image
+add_action('wp_head', function() {
+    ?>
+    <link rel="preload" 
+          as="image" 
+          href="https://hezekiahconsultancy.com/wp-content/uploads/2025/09/hezekiah-hero-1024x344.png" 
+          fetchpriority="high" 
+          type="image/webp">
+    <?php
+});
+
+
+function preload_lcp_image() {
+    echo '<link rel="preload" as="image" href="https://sp-ao.shortpixel.ai/client/to_webp,q_glossy,ret_img,w_1024/https://hezekiahconsultancy.com/wp-content/uploads/2025/09/hezekiah-hero-1024x344.png" fetchpriority="high">';
+}
+add_action('wp_head', 'preload_lcp_image');
+
+
+
+
+//font 
+
+function custom_enqueue_fonts() {
+    wp_enqueue_style( 'google-fonts', 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800;900&display=swap', false ); 
+}
+add_action( 'wp_enqueue_scripts', 'custom_enqueue_fonts' );
+
+
+
+// ---- Enqueue Styles ----
+add_action( 'wp_enqueue_scripts', function() {
+    wp_enqueue_style( 'astra-parent', get_template_directory_uri() . '/style.css' );
+    wp_enqueue_style( 'astra-child', get_stylesheet_uri(), array('astra-parent') );
+});
+
+
+// ---- Rewrite Rule ----
+// URL format: https://yoursite.com/visit-visa-pakistan-australia/
+function visa_custom_rewrite_rules() {
+    add_rewrite_rule(
+        '^visit-visa-([^/]+)-([^/]+)/?',
+        'index.php?pagename=visit-visa&fromCountry=$matches[1]&toCountry=$matches[2]',
+        'top'
+    );
+}
+add_action('init', 'visa_custom_rewrite_rules');
+
+// ---- Register Query Vars ----
+function visa_query_vars($vars) {
+    $vars[] = 'fromCountry';
+    $vars[] = 'toCountry';
+    return $vars;
+}
+add_filter('query_vars', 'visa_query_vars');
+
+
+// ---- API Fetch Function ----
+function get_visa_api_data() {
+    static $cachedData = null;
+    if ($cachedData !== null) return $cachedData;
+
+    $fromCountry = get_query_var('fromCountry', '');
+    $toCountry   = get_query_var('toCountry', '');
+
+    if (!$fromCountry || !$toCountry) {
+        return [];
+    }
+
+    // Format correctly (replace dashes and capitalize words)
+    $fromCountry = ucwords(strtolower(str_replace('-', ' ', $fromCountry)));
+    $toCountry   = ucwords(strtolower(str_replace('-', ' ', $toCountry)));
+
+    // Build API URL
+    $api_url = "https://ai-backend-service-prod-1058909260478.asia-south2.run.app/visa/multi-info?fromCountry={$fromCountry}&toCountry={$toCountry}";
+
+    // Fetch API
+    $response = wp_remote_get($api_url);
+    if (is_wp_error($response)) {
+        return [];
+    }
+
+    $data = json_decode(wp_remote_retrieve_body($response), true);
+    $cachedData = $data['result'] ?? [];
+    return $cachedData;
+}
+
+
+// ---- Shortcodes ----
+
+// Debug full API response
+add_shortcode('visa_debug', function() {
+    $data = get_visa_api_data();
+    return '<pre>' . print_r($data, true) . '</pre>';
+});
+
+// Visa Type
+add_shortcode('visaType', function() {
+    $data = get_visa_api_data();
+    return $data[0]['visaType'] ?? '';
+});
+
+// Method
+add_shortcode('visaMethod', function() {
+    $data = get_visa_api_data();
+    return $data[0]['method'] ?? '';
+});
+
+// Entry
+add_shortcode('visaEntry', function() {
+    $data = get_visa_api_data();
+    return $data[0]['entry'] ?? '';
+});
+
+// Validity
+add_shortcode('visaValidity', function() {
+    $data = get_visa_api_data();
+    return $data[0]['validity'] ?? '';
+});
+
+// Length of Stay
+add_shortcode('visaLengthOfStay', function() {
+    $data = get_visa_api_data();
+    return $data[0]['lengthOfStay'] ?? '';
+});
+
+// Requirements
+add_shortcode('visaRequirements', function() {
+    $data = get_visa_api_data();
+    if (empty($data[0]['requirements'])) return '';
+    $html = '<ul class="visa-requirements">';
+    foreach ($data[0]['requirements'] as $req) {
+        $html .= '<li>' . esc_html($req) . '</li>';
+    }
+    $html .= '</ul>';
+    return $html;
+});
+
+// FAQs Shortcode with styling
+add_shortcode('visaFaqs', function() {
+    $data = get_visa_api_data();
+    if (empty($data[0]['faqs'])) return '';
+
+    $html  = '<div class="visa-faqs">';
+
+    foreach ($data[0]['faqs'] as $index => $faq) {
+        $openClass = $index === 0 ? 'style="display:block;"' : '';
+        $activeClass = $index === 0 ? ' active' : '';
+
+        $html .= '
+        <div class="faq-item">
+            <button class="faq-question' . $activeClass . '" type="button">
+                <span class="faq-text">Q: ' . esc_html($faq['question']) . '</span>
+                <span class="faq-icon">' . ($index === 0 ? "–" : "+") . '</span>
+            </button>
+            <div class="faq-answer" ' . $openClass . '>
+                <p>A: ' . esc_html($faq['answer']) . '</p>
+            </div>
+        </div>';
+    }
+
+    $html .= '</div>';
+
+    // JS for toggle
+    $html .= '
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".faq-question").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                let ans = this.nextElementSibling;
+                let icon = this.querySelector(".faq-icon");
+
+                if (ans.style.display === "block") {
+                    ans.style.display = "none";
+                    icon.textContent = "+";
+                    this.classList.remove("active");
+                } else {
+                    // close all
+                    document.querySelectorAll(".faq-answer").forEach(a => a.style.display = "none");
+                    document.querySelectorAll(".faq-question").forEach(q => {
+                        q.classList.remove("active");
+                        q.querySelector(".faq-icon").textContent = "+";
+                    });
+
+                    ans.style.display = "block";
+                    icon.textContent = "–";
+                    this.classList.add("active");
+                }
+            });
+        });
+    });
+    </script>';
+
+    // CSS for styling
+    $html .= '
+    <style>
+    .visa-faqs {
+        margin: 20px auto;
+    }
+    .faq-item {
+        margin-bottom: 10px;
+        
+        padding-bottom: 8px;
+    }
+    .faq-item:last-child {
+        border-bottom: none; /* remove double line at end */
+    }
+    .faq-question {
+        background: none;
+        border: none;
+        font-weight: bold;
+        color: #3FC9F1;
+        font-size: 16px;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+        padding: 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: color 0.3s ease;
+    }
+    .faq-question.active {
+        color: #3FC9F1; /* same blue even when active */
+    }
+    .faq-icon {
+        font-size: 22px;
+        font-weight: bold;
+        color: #3FC9F1;
+        width: 25px;
+        text-align: center;
+    }
+    .faq-answer {
+        display: none;
+        color: #000;
+        margin: 5px 0 0 0;
+        font-size: 15px;
+    }
+    </style>';
+
+    return $html;
+});
+
+// Guarantee
+add_shortcode('visa_guarantee', function() {
+    $data = get_visa_api_data();
+    return $data[0]['guarantee'] ?? '';
+});
+
+
+
+
+
+
+
+// Dynamic Country Heading (only from + to country)
+function visa_country_heading_shortcode($atts) {
+    $atts = shortcode_atts(
+        array(
+            'type' => 'body' // default: body
+        ),
+        $atts,
+        'visa_heading'
+    );
+
+    $fromCountry = ucfirst(get_query_var('fromCountry', ''));
+    $toCountry   = ucfirst(get_query_var('toCountry', ''));
+
+    if ($fromCountry && $toCountry) {
+        $heading = $fromCountry . ' to ' . $toCountry;
+    } else {
+        $heading = '';
+    }
+
+    if ($atts['type'] === 'banner') {
+        // Banner style
+        return '<span class="visa-heading-banner">'
+                    . esc_html($heading) .
+               '</span>';
+    } else {
+        // Body style
+        return '<span class="visa-heading-body">'
+                    . esc_html($heading) .
+               '</span>';
+    }
+}
+add_shortcode('visa_heading', 'visa_country_heading_shortcode');
+
+
+// Add responsive CSS
+function visa_heading_responsive_css() {
+    echo '<style>
+        .visa-heading-banner {
+            font-family: Open Sans, sans-serif;
+            font-size: 50px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .visa-heading-body {
+            font-family: Open Sans, sans-serif;
+            font-size: 35px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 767px) {
+            .visa-heading-banner,
+            .visa-heading-body {
+                font-size: 20px !important;
+            }
+        }
+    </style>';
+}
+add_action('wp_head', 'visa_heading_responsive_css');
+
+
+
+// Shortcode to show current local time & date
+function shortcode_current_local_time() {
+    // Unique ID for div (in case multiple shortcodes are used on same page)
+    $id = 'local-time-' . uniqid();
+
+    // Output container
+    $html = '<div id="'.esc_attr($id).'" class="local-time"></div>';
+
+    // Attach inline JS (only when shortcode is used)
+    $html .= "
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var timeDiv = document.getElementById('$id');
+        if (!timeDiv) return;
+
+        function showLocalTime() {
+            var now = new Date();
+            var options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZoneName: 'short'
+            };
+            timeDiv.innerText = now.toLocaleString(undefined, options);
+        }
+
+        showLocalTime();
+        setInterval(showLocalTime, 1000);
+    });
+    </script>
+    ";
+
+    return $html;
+}
+add_shortcode('current_local_time', 'shortcode_current_local_time');
+
+
+
+
+//breadcrums 
+
+
+// // Hide Astra breadcrumbs on Visit Visa page
+// function hide_astra_breadcrumb_visit_visa() {
+//     if (is_page('visit-visa')) { 
+//         echo '<style>
+//             .ast-breadcrumbs {
+//                 display: none !important;
+//             }
+//         </style>';
+//     }
+// }
+// add_action('wp_head', 'hide_astra_breadcrumb_visit_visa');
+
+// // Custom breadcrumbs for Visit Visa page
+// function custom_visa_breadcrumbs_shortcode() {
+//     $home = '<a href="' . home_url() . '" style="color:#666;text-decoration:none;">Home</a>';
+    
+//     // Get query vars (same as API)
+//     $fromCountry = ucfirst(get_query_var('fromCountry', ''));
+//     $toCountry   = ucfirst(get_query_var('toCountry', ''));
+
+//     $country_path = '';
+//     if ($fromCountry && $toCountry) {
+//         $country_path = $fromCountry . ' to ' . $toCountry;
+//     }
+
+//     // Build Breadcrumb
+//     $breadcrumbs = $home . ' &gt; Visit Visa';
+//     if ($country_path) {
+//         $breadcrumbs .= ' &gt; ' . $country_path;
+//     }
+
+//     return '<div class="visa-breadcrumbs" style="font-family:Manrope,sans-serif; font-size:16px; color:#000;">' 
+//             . $breadcrumbs . 
+//           '</div>';
+// }
+// add_shortcode('visa_breadcrumbs', 'custom_visa_breadcrumbs_shortcode');
+
+
+
+
+
+add_shortcode('visa_debug', function() {
+    return '<pre>' . print_r(get_visa_api_data(), true) . '</pre>';
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////
+// SINGLE VISA PAGE CODE (Final Version Fixed + Mapping)
+//////////////////////////////////////////
+
+// 1. Add rewrite rule: /single-visa-country/
+function single_visa_rewrite_rules() {
+    add_rewrite_rule(
+        '^single-visa-([^/]+)/?',
+        'index.php?pagename=single-visa&country=$matches[1]',
+        'top'
+    );
+}
+add_action('init', 'single_visa_rewrite_rules');
+
+// 2. Register query var "country"
+function single_visa_query_vars($vars) {
+    $vars[] = 'country';
+    return $vars;
+}
+add_filter('query_vars', 'single_visa_query_vars');
+
+// 3. Fetch API Data (slug → proper country name mapping)
+function get_single_visa_data() {
+    static $cachedData = null;
+    if ($cachedData !== null) return $cachedData;
+
+    $countrySlug = strtolower(trim(get_query_var('country', '')));
+    if (!$countrySlug) return [];
+
+    // ✅ Mapping: slug → API/display name
+    $countryMap = [
+        'usa'            => 'United States of America',
+        'us'             => 'United States of America',
+        'united-states'  => 'United States of America',
+        'united-states-of-america' => 'United States of America',
+
+        'uk'             => 'United Kingdom',
+        'united-kingdom' => 'United Kingdom',
+        'united-kindom'  => 'United Kingdom', // common typo
+
+        'uae'            => 'United Arab Emirates',
+        'united-arab-emirates' => 'United Arab Emirates',
+
+        'pakistan'       => 'Pakistan',
+        'india'          => 'India',
+        'turkey'         => 'Turkey',
+        'saudi'          => 'Saudi Arabia',
+        'saudi-arabia'   => 'Saudi Arabia',
+        // aur bhi countries add kar sakte ho
+    ];
+
+    // Slug ko proper naam me map karo
+    if (array_key_exists($countrySlug, $countryMap)) {
+        $countryName = $countryMap[$countrySlug];
+    } else {
+        // fallback: hyphen replace, case-insensitive fix
+        $countryName = str_replace('-', ' ', $countrySlug);
+        $countryName = ucwords(strtolower($countryName));
+
+        // Small words ko chhota rakho
+        $countryName = str_ireplace(' Of ', ' of ', $countryName);
+        $countryName = str_ireplace(' And ', ' and ', $countryName);
+        $countryName = str_ireplace(' The ', ' the ', $countryName);
+    }
+
+    // API call proper country name se
+    $api_url = "https://ai-backend-service-prod-1058909260478.asia-south2.run.app/visa/single-info?country=" . urlencode($countryName);
+    $response = wp_remote_get($api_url, ['timeout' => 10]);
+
+    if (is_wp_error($response)) {
+        return ['error' => $response->get_error_message()];
+    }
+
+    $data = json_decode(wp_remote_retrieve_body($response), true);
+
+    if (!empty($data['result'][0])) {
+        $cachedData = $data['result'][0];
+    } else {
+        $cachedData = [];
+    }
+
+    return $cachedData;
+}
+
+//////////////////////////////////////////////////////
+// 4. Shortcodes
+//////////////////////////////////////////////////////
+
+// Visa Information
+add_shortcode('visa_information', function() {
+    $data = get_single_visa_data();
+    if (empty($data)) return '';
+    $html  = '<h2>' . esc_html($data['visaType'] ?? '') . '</h2>';
+    $html .= '<p><strong>Purpose:</strong> ' . esc_html($data['purpose'] ?? '') . '</p>';
+    $html .= '<p><strong>Validity:</strong> ' . esc_html($data['validity'] ?? '') . '</p>';
+    $html .= '<p><strong>Length of Stay:</strong> ' . esc_html($data['lengthOfStay'] ?? '') . '</p>';
+    $html .= '<p><strong>Entry Type:</strong> ' . esc_html($data['entry'] ?? '') . '</p>';
+    return $html;
+});
+
+// Who Must Apply / Who Does Not Need
+add_shortcode('visa_who', function() {
+    $data = get_single_visa_data();
+    if (empty($data)) return '';
+    $html  = '<p><strong>Who Must Apply:</strong> ' . esc_html($data['whoMustApply'] ?? '') . '</p>';
+    $html .= '<p><strong>Who Does Not Need:</strong> ' . esc_html($data['whoDoesNotNeed'] ?? '') . '</p>';
+    return $html;
+});
+
+// What You Cannot Do
+add_shortcode('visa_cannot_do', function() {
+    $data = get_single_visa_data();
+    if (empty($data['canNotDo'])) return '';
+    $html = '<h3>🚫 What You Cannot Do</h3><ul>';
+    foreach ($data['canNotDo'] as $item) {
+        $html .= '<li>' . esc_html($item) . '</li>';
+    }
+    $html .= '</ul>';
+    return $html;
+});
+
+// Required Documents
+add_shortcode('visa_documents', function() {
+    $data = get_single_visa_data();
+    if (empty($data['requirements'])) return '';
+    $html = '<h3>📄 Required Documents</h3><ul>';
+    foreach ($data['requirements'] as $doc) {
+        $html .= '<li>' . esc_html($doc) . '</li>';
+    }
+    $html .= '</ul>';
+    return $html;
+});
+
+// Processing Options
+add_shortcode('visa_processing', function() {
+    $data = get_single_visa_data();
+    if (empty($data['processingOption'])) return '';
+    $html = '<h3>⚡ Processing Options</h3><ul>';
+    foreach ($data['processingOption'] as $opt) {
+        $html .= '<li>' . esc_html($opt) . '</li>';
+    }
+    $html .= '</ul>';
+    return $html;
+});
+
+// Additional Notes
+add_shortcode('visa_notes', function() {
+    $data = get_single_visa_data();
+    if (empty($data['additionalNotes'])) return '';
+    $html = '<h3>ℹ️ Additional Notes</h3>';
+    $html .= '<p>' . esc_html($data['additionalNotes']) . '</p>';
+    return $html;
+});
+
+// Country Name Only
+add_shortcode('visa_country_name', function() {
+    $data = get_single_visa_data();
+    if (empty($data['countryName'])) return '';
+    return esc_html($data['countryName']);
+});
+
+// Debug (for testing)
+add_shortcode('single_visa_debug', function() {
+    $country = get_query_var('country', '');
+    $data = get_single_visa_data();
+    return '<pre>Country Var: ' . esc_html($country) . "\n" . print_r($data, true) . '</pre>';
+});
+
+//////////////////////////////////////////////////////
+// 5. Full Page Shortcode (all sections together)
+//////////////////////////////////////////////////////
+add_shortcode('single_visa_page', function() {
+    $data = get_single_visa_data();
+    if (empty($data)) return '<p>No visa information available.</p>';
+
+    $html = '';
+
+    // Visa Information
+    $html .= '<section>';
+    $html .= '<h2>' . esc_html($data['visaType'] ?? '') . '</h2>';
+    $html .= '<p><strong>Purpose:</strong> ' . esc_html($data['purpose'] ?? '') . '</p>';
+    $html .= '<p><strong>Validity:</strong> ' . esc_html($data['validity'] ?? '') . '</p>';
+    $html .= '<p><strong>Length of Stay:</strong> ' . esc_html($data['lengthOfStay'] ?? '') . '</p>';
+    $html .= '<p><strong>Entry Type:</strong> ' . esc_html($data['entry'] ?? '') . '</p>'; 
+    $html .= '</section>';
+
+    // Who Must Apply / Who Does Not Need
+    $html .= '<section>';
+    $html .= '<h3>👤 Who Must Apply</h3><p>' . esc_html($data['whoMustApply'] ?? '') . '</p>';
+    $html .= '<h3>✅ Who Does Not Need</h3><p>' . esc_html($data['whoDoesNotNeed'] ?? '') . '</p>';
+    $html .= '</section>';
+
+    // What You Cannot Do
+    if (!empty($data['canNotDo'])) {
+        $html .= '<section><h3>🚫 What You Cannot Do</h3><ul>';
+        foreach ($data['canNotDo'] as $item) {
+            $html .= '<li>' . esc_html($item) . '</li>';
+        }
+        $html .= '</ul></section>';
+    }
+
+    // Required Documents
+    if (!empty($data['requirements'])) {
+        $html .= '<section><h3>📄 Required Documents</h3><ul>';
+        foreach ($data['requirements'] as $doc) {
+            $html .= '<li>' . esc_html($doc) . '</li>';
+        }
+        $html .= '</ul></section>';
+    }
+
+    // Processing Options
+    if (!empty($data['processingOption'])) {
+        $html .= '<section><h3>⚡ Processing Options</h3><ul>';
+        foreach ($data['processingOption'] as $opt) {
+            $html .= '<li>' . esc_html($opt) . '</li>';
+        }
+        $html .= '</ul></section>';
+    }
+
+    // Additional Notes
+    if (!empty($data['additionalNotes'])) {
+        $html .= '<section><h3>ℹ️ Additional Notes</h3>';
+        $html .= '<p>' . esc_html($data['additionalNotes']) . '</p></section>';
+    }
+
+    return $html;
+});
+
+//////////////////////////////////////////////////////
+// 6. Extra Single Shortcodes (Validity / Entry / Max Stay)
+//////////////////////////////////////////////////////
+
+// Valid For Shortcode
+function visa_validity_shortcode() {
+    $visa = get_single_visa_data();
+    if (empty($visa['validity'])) return '';
+    return esc_html($visa['validity']);
+}
+add_shortcode('visa_validity', 'visa_validity_shortcode');
+
+// Number of Entries Shortcode
+function visa_entry_shortcode() {
+    $visa = get_single_visa_data();
+    if (empty($visa['entry'])) return '';
+    return esc_html($visa['entry']);
+}
+add_shortcode('visa_entry', 'visa_entry_shortcode');
+
+// Max Stay Shortcode 
+function visa_max_stay_shortcode() {
+    $visa = get_single_visa_data();
+    if (empty($visa['lengthOfStay'])) return '';
+    return esc_html($visa['lengthOfStay']);
+}
+add_shortcode('visa_max_stay', 'visa_max_stay_shortcode');
+
+
+
+
+
+//custome form 
+
+// =======================
+// 🎨 Stylish Inquiry Form + WooCommerce Order + Link Dashboard
+// =======================
+add_shortcode('order_form_page', function() {
+    ob_start(); ?>
+    
+    <style>
+    /* ====== FORM STYLING START (from second snippet) ====== */
+    .inquiry-form-wrapper * { box-sizing: border-box; }
+    .inquiry-form-wrapper {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: Manrope, sans-serif;
+    }
+
+    /* Progress Bar Styles */
+    .form-progress {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+    .form-progress::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e0e0e0;
+        z-index: 0;
+    }
+    .progress-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+    .progress-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #00bcd4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+        color: #00bcd4;
+        font-weight: 600;
+    }
+    .progress-step.active .progress-circle {
+        background: #00bcd4;
+        color: #fff;
+    }
+    .progress-label { font-size: 12px; color: #666; }
+
+    /* Form Card Styles */
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        padding: 40px;
+    }
+    .form-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 30px;
+        text-align: left;
+    }
+
+    /* Form Layout */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; margin-bottom: 30px; }
+    .form-group.full-width:last-of-type { margin-bottom: 0; }
+    .form-label { font-size: 14px; color: #333; margin-bottom: 8px; font-weight: 500; }
+
+    /* Input Styles */
+    .form-input, .form-textarea {
+        padding: 12px 15px;
+        border-radius: 8px !important;
+        border: 1px solid #e0e0e0 !important;
+        font-size: 14px;
+        transition: border-color 0.3s;
+        background: #fff;
+        font-family: inherit;
+    }
+    .form-input:focus, .form-textarea:focus { outline: none; border-color: #00bcd4; }
+    .form-input::placeholder, .form-textarea::placeholder { color: #999; }
+
+    /* Radio & Checkbox Groups */
+    .radio-group, .checkbox-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 8px; }
+    .radio-label, .checkbox-label {
+        display: flex;
+        align-items: center;
+        padding: 10px 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: #fff;
+        font-size: 14px;
+        color: #333;
+        position: relative;
+    }
+    .radio-label:hover, .checkbox-label:hover { border-color: #00bcd4; }
+    .radio-label input[type="radio"], .checkbox-label input[type="checkbox"] {
+        position: absolute; opacity: 0; width: 0; height: 0;
+    }
+    .radio-label:has(input[type="radio"]:checked), 
+    .checkbox-label:has(input[type="checkbox"]:checked) {
+        background: #e0f7fa; border-color: #00bcd4;
+    }
+
+    /* Contact Method Icons */
+    .contact-icon-wrapper { display: flex; align-items: center; gap: 8px; }
+    .contact-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+    .whatsapp-icon { color: #25D366; }
+    .phone-icon { color: #2196F3; }
+    .email-icon { color: #DB4437; }
+
+    /* Submit Button */
+    .submit-btn {
+        background: linear-gradient(135deg, #00bcd4 0%, #00acc1 100%);
+        color: #fff;
+        padding: 14px 40px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: block;
+        margin: 30px auto 0;
+        min-width: 200px;
+    }
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,188,212,0.3);
+    }
+
+    /* Success Message */
+    .success-message {
+        background: #d4edda;
+        color: #155724;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .form-row { grid-template-columns: 1fr; }
+        .form-card { padding: 25px; }
+        .radio-group, .checkbox-group { flex-direction: column; }
+        .progress-label { font-size: 10px; }
+    }
+    </style>
+
+    <div class="inquiry-form-wrapper">
+        <div class="form-progress">
+            <div class="progress-step active">
+                <div class="progress-circle">✓</div>
+                <span class="progress-label">Your Details</span>
+            </div>
+            <div class="progress-step">
+                <div class="progress-circle">2</div>
+                <span class="progress-label">Query</span>
+            </div>
+            <div class="progress-step">
+                <div class="progress-circle">3</div>
+                <span class="progress-label">Submit</span>
+            </div>
+        </div>
+
+        <div class="form-card">
+
+            <form id="customOrderForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="fullName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="text" name="phone" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">City / Country</label>
+                        <input type="text" name="cityOrCountry" class="form-input" required>
+                    </div>
+                </div>
+
+               <div class="form-group full-width">
+    <label class="form-label">Preferred Contact</label>
+    <div class="radio-group">
+        <!-- WhatsApp -->
+        <label class="radio-label">
+            <input type="radio" name="preferredContact" value="WhatsApp">
+            <div class="contact-icon-wrapper">
+                <svg class="contact-icon whatsapp-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+                <span>WhatsApp</span>
+            </div>
+        </label>
+
+        <!-- Phone -->
+        <label class="radio-label">
+            <input type="radio" name="preferredContact" value="Phone">
+            <div class="contact-icon-wrapper">
+                <svg class="contact-icon phone-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                </svg>
+                <span>Phone</span>
+            </div>
+        </label>
+
+        <!-- Email -->
+        <label class="radio-label">
+            <input type="radio" name="preferredContact" value="Email">
+            <div class="contact-icon-wrapper">
+                <svg class="contact-icon email-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                <span>Email</span>
+            </div>
+        </label>
+    </div>
+</div>
+
+
+              <div class="form-group full-width">
+    <label class="form-label">Service Required</label>
+    <div class="checkbox-group">
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Airport Transfers">
+            <span>Airport Transfers</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Air Tickets">
+            <span>Air Tickets</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Airport Protocols">
+            <span>Airport Protocols</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Student Visa">
+            <span>Student Visa</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Transit Visa">
+            <span>Transit Visa</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Travel Consultation">
+            <span>Travel Consultation</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Travel Insurance">
+            <span>Travel Insurance</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Tour Packages">
+            <span>Tour Packages</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Visit Visa">
+            <span>Visit Visa</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Hotel Reservation">
+            <span>Hotel Reservation</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" name="serviceRequired[]" value="Work Permit 1 Year Visa">
+            <span>Work Permit 1 Year Visa</span>
+        </label>
+    </div>
+</div>
+
+
+                <div class="form-group full-width">
+                    <label class="form-label">Brief Description</label>
+                    <textarea name="briefDescription" class="form-textarea" required></textarea>
+                </div>
+
+               <div class="form-group1 full-width" style="text-align: center;">
+    <label class="form-label">How did you hear about us?</label>
+    <div class="radio-group1" style="display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 10px;">
+        <label class="radio-label"><input type="radio" name="heardFrom" value="Google Search"> Google Search</label>
+        <label class="radio-label"><input type="radio" name="heardFrom" value="Referral"> Referral</label>
+        <label class="radio-label"><input type="radio" name="heardFrom" value="Social Media"> Social Media</label>
+        <label class="radio-label"><input type="radio" name="heardFrom" value="Advertisement"> Advertisement</label>
+        <label class="radio-label"><input type="radio" name="heardFrom" value="Other"> Other</label>
+    </div>
+</div>
+
+
+                <button type="submit" class="submit-btn">Submit</button>
+            </form>
+
+            <div id="formResponse"></div>
+        </div>
+    </div>
+
+    <script>
+jQuery(document).ready(function($) {
+    $('#customOrderForm').on('submit', function(e) {
+        e.preventDefault();
+        let formData = $(this).serialize();
+        $('#formResponse').html('⏳ Submitting your form...');
+
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            dataType: 'json',
+            data: { action: 'submit_order_form', formData: formData },
+            success: function(response) {
+                if (response.success) {
+                    // Only show success message, no link
+                    $('#formResponse').html('✅ Form submitted successfully!');
+                } else {
+                    $('#formResponse').html('❌ ' + (response.message || 'Something went wrong.'));
+                }
+            },
+            error: function() {
+                $('#formResponse').html('⚠️ Server error occurred.');
+            }
+        });
+    });
+});
+</script>
+
+    <?php
+    return ob_get_clean();
+});
+
+
+// =======================
+// 🧠 Backend Logic (same working logic you had)
+// =======================
+add_action('wp_ajax_submit_order_form', 'handle_custom_order_form');
+add_action('wp_ajax_nopriv_submit_order_form', 'handle_custom_order_form');
+
+function handle_custom_order_form() {
+  parse_str($_POST['formData'], $data);
+
+  $api_url = 'https://ai-backend-service-prod-1058909260478.asia-south2.run.app/forms/customerInquiry';
+  $payload = [
+    "fullName" => sanitize_text_field($data['fullName']),
+    "email" => sanitize_email($data['email']),
+    "phone" => sanitize_text_field($data['phone']),
+    "cityOrCountry" => sanitize_text_field($data['cityOrCountry']),
+    "serviceRequired" => is_array($data['serviceRequired']) ? implode(', ', $data['serviceRequired']) : sanitize_text_field($data['serviceRequired']),
+    "preferredContact" => sanitize_text_field($data['preferredContact']),
+    "briefDescription" => sanitize_textarea_field($data['briefDescription']),
+    "heardFrom" => sanitize_text_field($data['heardFrom'])
+  ];
+
+  $response = wp_remote_post($api_url, [
+    'method' => 'POST',
+    'headers' => ['Content-Type' => 'application/json'],
+    'body' => wp_json_encode($payload),
+    'timeout' => 30
+  ]);
+
+  if (is_wp_error($response)) {
+    wp_send_json(['success' => false, 'message' => 'API request failed.']);
+  }
+
+  $body = json_decode(wp_remote_retrieve_body($response), true);
+
+  if (!empty($body['success']) && !empty($body['prefilledFormLink'])) {
+    $order = wc_create_order();
+    $order->set_billing_first_name($payload['fullName']);
+    $order->set_billing_email($payload['email']);
+    $order->set_billing_phone($payload['phone']);
+    $order->add_product(wc_get_product(6532), 1);
+    $order->calculate_totals();
+    $order_id = $order->get_id();
+
+    update_post_meta($order_id, '_customer_form_link', esc_url($body['prefilledFormLink']));
+
+    wp_send_json(['success' => true, 'formLink' => $body['prefilledFormLink']]);
+  } else {
+    wp_send_json(['success' => false, 'message' => 'Form link not received from backend.']);
+  }
+}
+
+// =======================
+// 🧾 WooCommerce Orders - Form Link Column
+// =======================
+add_filter('manage_edit-shop_order_columns', function($columns) {
+  $columns['form_link'] = 'Form Link';
+  return $columns;
+});
+add_action('manage_shop_order_posts_custom_column', function($column, $post_id) {
+  if ($column === 'form_link') {
+    $link = get_post_meta($post_id, '_prefilled_form_link', true);
+    echo $link ? '<a href="' . esc_url($link) . '" target="_blank">🔗 Open Form</a>' : '<em>No link</em>';
+  }
+}, 10, 2);
+
+// =======================
+// 🗂️ Admin Dashboard - Form Links Tab
+// =======================
+add_action('admin_menu', function() {
+  add_menu_page('Form Links', 'Form Links', 'manage_woocommerce', 'form-links-dashboard', 'show_form_links_dashboard', 'dashicons-media-text', 56);
+});
+function show_form_links_dashboard() {
+  $args = [
+    'post_type' => 'shop_order',
+    'post_status' => 'any',
+    'posts_per_page' => 100,
+    'meta_query' => [['key' => '_prefilled_form_link', 'compare' => 'EXISTS']]
+  ];
+  $orders = get_posts($args);
+
+  echo '<div class="wrap"><h1>🧾 Form Links Dashboard</h1><p>Orders with generated form links:</p>';
+  if ($orders) {
+    echo '<table class="widefat striped"><thead><tr><th>Order ID</th><th>Customer</th><th>Form Link</th></tr></thead><tbody>';
+    foreach ($orders as $order_post) {
+      $order = wc_get_order($order_post->ID);
+      $name = $order ? $order->get_billing_first_name() : '-';
+      $link = get_post_meta($order_post->ID, '_prefilled_form_link', true);
+      echo '<tr><td><a href="' . admin_url('post.php?post=' . $order_post->ID . '&action=edit') . '">#' . $order_post->ID . '</a></td>';
+      echo '<td>' . esc_html($name) . '</td>';
+      echo '<td>' . ($link ? '<a href="' . esc_url($link) . '" target="_blank">🔗 Open Form</a>' : '<em>No link</em>') . '</td></tr>';
+    }
+    echo '</tbody></table>';
+  } else {
+    echo '<p>No form links found yet.</p>';
+  }
+  echo '</div>';
+}
+
+
+
+
+//cusotme past type 
+// 🔹 Add Admin Menu for Form Links
+add_action('admin_menu', 'register_form_links_dashboard_page');
+function register_form_links_dashboard_page() {
+    add_menu_page(
+        'Form Links Dashboard',          // Page Title
+        'Form Links',                    // Menu Title (Dashboard Tab)
+        'manage_woocommerce',            // Capability
+        'form-links-dashboard',          // Slug
+        'render_form_links_dashboard',   // Callback
+        'dashicons-admin-links',         // Icon
+        56                               // Position
+    );
+}
+
+// 🔹 Display all orders with form links
+function render_form_links_dashboard() {
+    echo '<div class="wrap"><h1>🧾 Form Links Dashboard</h1>';
+    echo '<p>Below are all orders with generated form links.</p>';
+
+    global $wpdb;
+    $results = $wpdb->get_results("
+        SELECT p.ID, p.post_date, pm.meta_value AS form_link
+        FROM {$wpdb->prefix}posts p
+        INNER JOIN {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id
+        WHERE pm.meta_key = '_customer_form_link'
+        ORDER BY p.post_date DESC
+    ");
+
+    if ($results && !empty($results)) {
+        echo '<table class="widefat striped">';
+        echo '<thead><tr>
+                <th>Order ID</th>
+                <th>Customer Name</th>
+                <th>Form Link</th>
+                <th>Date</th>
+              </tr></thead><tbody>';
+
+        foreach ($results as $row) {
+            $order = wc_get_order($row->ID);
+            $name = $order ? $order->get_billing_first_name() : '-';
+            $form_link = esc_url($row->form_link);
+
+            echo '<tr>
+                    <td>#' . esc_html($row->ID) . '</td>
+                    <td>' . esc_html($name) . '</td>
+                    <td><a href="' . $form_link . '" target="_blank">Open Form Link</a></td>
+                    <td>' . esc_html($row->post_date) . '</td>
+                  </tr>';
+        }
+
+        echo '</tbody></table>';
+    } else {
+        echo '<p><strong>No form links found yet.</strong></p>';
+    }
+
+    echo '</div>';
+}
+
+
+
+//hook woocoomerce for send backned data for front end 
+
+
+add_action('save_post_shop_order', 'send_order_to_backend_api', 20, 3);
+function send_order_to_backend_api($post_id, $post, $update) {
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+
+    // Sirf order ke liye chale
+    if ($post->post_type !== 'shop_order') return;
+
+    $order = wc_get_order($post_id);
+    if (!$order) return;
+
+    // Customer Info
+    $customer_name  = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
+    $customer_email = $order->get_billing_email();
+    $customer_phone = $order->get_billing_phone();
+
+    // Default Bank Info (you can change)
+    $bank_name     = 'Meezan Bank';
+    $account_name  = 'Hezekiah Consultancy';
+    $account_no    = '0112-0123456789';
+    $iban          = 'PK12MEZN0000123456789';
+
+    // Invoice Date
+    $invoice_date = date('Y-m-d');
+
+    // Prepare product details (support multiple rows)
+    $items = $order->get_items();
+    $payload = [
+        'customer_name'    => $customer_name,
+        'customer_email'   => $customer_email,
+        'customer_contact' => $customer_phone,
+        'invoice_date'     => $invoice_date,
+        'bank_name'        => $bank_name,
+        'account_name'     => $account_name,
+        'account_no'       => $account_no,
+        'iban'             => $iban,
+    ];
+
+    $subtotal = 0;
+    $count = 1;
+    foreach ($items as $item) {
+        $product = $item->get_product();
+        $name = $item->get_name();
+        $qty  = $item->get_quantity();
+        $amount = $item->get_total();
+
+        // Example - these 3 fields are customizable
+        $payload["description_{$count}"] = $name;
+        $payload["visa_{$count}"] = $product ? $product->get_sku() : 'N/A';
+        $payload["sector_{$count}"] = 'Private';
+        $payload["qty_{$count}"] = $qty;
+        $payload["amount_{$count}"] = $amount;
+
+        $subtotal += $amount;
+        $count++;
+    }
+
+    $payload['subtotal'] = $subtotal;
+    $payload['transferred'] = 0;
+    $payload['outstanding'] = 0;
+    $payload['total'] = $subtotal;
+
+    // Send to backend endpoint
+    $response = wp_remote_post('https://ai-backend-service-prod-1058909260478.asia-south2.run.app/invoice/generate', [
+        'method' => 'POST',
+        'headers' => ['Content-Type' => 'application/json'],
+        'body' => wp_json_encode($payload),
+        'timeout' => 30,
+    ]);
+
+    // Optional: Log result for debugging
+    if (is_wp_error($response)) {
+        error_log('Backend API Error: ' . $response->get_error_message());
+    } else {
+        error_log('Backend API Response: ' . wp_remote_retrieve_body($response));
+    }
+    
+}
+
+
+
+
+
+
+
+//Recant Blog post card 
+// ===== 1️⃣ Shortcode for Filter + Card Slider =====
+add_shortcode('filterable_blog_slider', function() {
+  ob_start(); ?>
+
+ <!-- Filter Form -->
+<div class="usaids-filter-bar">
+  <!-- Category Dropdown -->
+  <select id="filterCategory" class="usaids-filter-select">
+    <option value="">All Categories</option>
+    <?php
+      $categories = get_terms(array(
+        'taxonomy'    => 'category',
+        'hide_empty' => false,
+      ));
+
+      if ( ! empty($categories) && ! is_wp_error($categories) ) {
+        foreach ($categories as $cat) {
+          echo '<option value="' . esc_attr($cat->term_id) . '">' . esc_html($cat->name) . '</option>';
+        }
+      } else {
+        echo '<option disabled>No categories found</option>';
+      }
+    ?>
+  </select>
+
+  <!-- Country Dropdown -->
+  <select id="filterCountry" class="usaids-filter-select">
+    <option value="">All Countries</option>
+    <option>USA</option>
+    <option>UK</option>
+    <option>Canada</option>
+    <option>Turkey</option>
+  </select>
+
+  <button id="filterBtn" class="usaids-filter-btn">
+    <i class="fa fa-search" aria-hidden="true"></i>
+  </button>
+</div>
+
+<script>
+document.getElementById('filterBtn').addEventListener('click', function() {
+  const cat = document.getElementById('filterCategory').value;
+  const country = document.getElementById('filterCountry').value;
+
+  const data = new FormData();
+  data.append('action', 'filter_posts');
+  data.append('category', cat);
+  data.append('country', country);
+
+  fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+    method: 'POST',
+    body: data
+  })
+  .then(res => res.text())
+  .then(html => {
+    document.getElementById('cardContainer').innerHTML = html;
+  });
+});
+</script>
+
+<style>
+/* ===========================
+   🔹 USAIDS FILTER BAR DESIGN (LEFT + COMPACT)
+=========================== */
+.usaids-filter-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 20px 0 !important;
+  padding: 10px 16px !important;
+  background: #ffffff !important;
+  border-radius: 40px !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05) !important;
+  width: fit-content !important;
+  max-width: 550px !important;
+  position: relative !important;
+  justify-content: flex-start !important;
+  z-index: 2 !important;
+}
+
+/* Dropdown Selects */
+.usaids-filter-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-color: #fff !important;
+  border: 1px solid #ccc !important;
+  border-radius: 25px !important;
+  padding: 9px 40px 9px 15px !important;
+  font-size: 14px !important;
+  color: #333 !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  min-width: 150px !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,<svg fill='%23666' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+}
+
+.usaids-filter-select:hover {
+  border-color: #0073aa !important;
+}
+
+.usaids-filter-select:focus {
+  border-color: #0073aa !important;
+  box-shadow: 0 0 0 3px rgba(0,115,170,0.15) !important;
+  outline: none !important;
+}
+
+/* Button */
+.usaids-filter-btn {
+   
+  background: #000 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 50px !important;
+  padding: 18px 18px !important;
+  font-size: 15px !important;
+  cursor: pointer !important;
+  transition: background 0.3s ease, transform 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+
+
+.usaids-filter-btn i {
+  font-size: 15px !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .usaids-filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .usaids-filter-select,
+  .usaids-filter-btn {
+    width: 100% !important;
+  }
+}
+</style>
+  <!-- Cards Section -->
+  <div class="slider-container">
+    <button class="arrow arrow-left" aria-label="Slide left" id="slideLeftBtn">&#8249;</button>
+    <div class="slider-wrapper">
+      <div class="card-container" id="cardContainer">
+        <?php
+        $args = array(
+          'post_type'      => 'post',
+          'posts_per_page' => 8,
+          'post_status'    => 'publish',
+        );
+        $query = new WP_Query($args);
+        if ($query->have_posts()):
+          while ($query->have_posts()): $query->the_post();
+            $thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
+            $category = get_the_category();
+            $cat_name = !empty($category) ? esc_html($category[0]->name) : 'Uncategorized';
+        ?>
+          <div class="visa-card">
+            <img src="<?php echo esc_url($thumbnail ?: 'https://via.placeholder.com/400x250'); ?>" alt="<?php the_title_attribute(); ?>" class="card-image">
+            <div class="card-content">
+              <h2 class="visa-title"><?php the_title(); ?></h2>
+              <p class="card-description"><?php echo wp_trim_words(get_the_excerpt(), 15, '...'); ?></p>
+              <div class="card-footer">
+                <div class="location">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span><?php echo $cat_name; ?></span>
+                </div>
+                <div class="rating"><span class="star">⭐</span><span>4.3</span></div>
+              </div>
+            </div>
+          </div>
+        <?php endwhile; wp_reset_postdata(); endif; ?>
+      </div>
+    </div>
+    <button class="arrow arrow-right" aria-label="Slide right" id="slideRightBtn">&#8250;</button>
+  </div>
+
+  <!-- JS: AJAX + Slider -->
+  <script>
+  document.getElementById('filterBtn').addEventListener('click', function() {
+    const cat = document.getElementById('filterCategory').value;
+    const country = document.getElementById('filterCountry').value;
+
+    const data = new FormData();
+    data.append('action', 'filter_posts_slider');
+    data.append('category', cat);
+    data.append('country', country);
+
+    document.getElementById('cardContainer').innerHTML = '<p>Loading...</p>';
+
+    fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+      method: 'POST',
+      body: data
+    })
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById('cardContainer').innerHTML = html;
+      setTimeout(() => { updateSliderMetrics(); }, 100);
+    });
+  });
+
+  // ===== Slider Logic =====
+  let currentPosition = 0, cardWidth = 0, visibleCards = 4, maxPosition = 0;
+  const container = document.getElementById('cardContainer');
+  const leftBtn = document.getElementById('slideLeftBtn');
+  const rightBtn = document.getElementById('slideRightBtn');
+
+  function getGap() {
+    const gap = getComputedStyle(container).gap;
+    return gap ? parseFloat(gap) : 0;
+  }
+  function calcCardWidth() {
+    const card = container.querySelector('.visa-card');
+    if (!card) return 0;
+    return card.getBoundingClientRect().width + getGap();
+  }
+  function calcVisibleCards() {
+    const w = window.innerWidth;
+    if (w <= 480) return 1;
+    if (w <= 768) return 2;
+    if (w <= 1024) return 3;
+    return 4;
+  }
+  function updateSliderMetrics() {
+    const cards = container.querySelectorAll('.visa-card');
+    cardWidth = calcCardWidth();
+    visibleCards = calcVisibleCards();
+    maxPosition = -(Math.max(0, cards.length - visibleCards) * cardWidth);
+    if (currentPosition < maxPosition) currentPosition = maxPosition;
+    if (currentPosition > 0) currentPosition = 0;
+    container.style.transform = `translateX(${currentPosition}px)`;
+    updateArrows(cards.length);
+  }
+  function updateArrows(totalCards) {
+    if (totalCards <= visibleCards) {
+      leftBtn.style.display = 'none';
+      rightBtn.style.display = 'none';
+      return;
+    } else {
+      leftBtn.style.display = 'flex';
+      rightBtn.style.display = 'flex';
+    }
+    leftBtn.disabled = (currentPosition >= 0);
+    rightBtn.disabled = (currentPosition <= maxPosition);
+    leftBtn.style.opacity = leftBtn.disabled ? '0.5' : '1';
+    rightBtn.style.opacity = rightBtn.disabled ? '0.5' : '1';
+  }
+  leftBtn.addEventListener('click', function() {
+    if (currentPosition < 0) {
+      currentPosition += cardWidth;
+      if (currentPosition > 0) currentPosition = 0;
+      container.style.transform = `translateX(${currentPosition}px)`;
+      updateSliderMetrics();
+    }
+  });
+  rightBtn.addEventListener('click', function() {
+    if (currentPosition > maxPosition) {
+      currentPosition -= cardWidth;
+      if (currentPosition < maxPosition) currentPosition = maxPosition;
+      container.style.transform = `translateX(${currentPosition}px)`;
+      updateSliderMetrics();
+    }
+  });
+  window.addEventListener('resize', () => setTimeout(updateSliderMetrics, 80));
+  window.addEventListener('load', updateSliderMetrics);
+  </script>
+
+  <style>
+  /* Filter Bar Styling */
+  .filter-bar {
+    margin-bottom: 25px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .filter-select {
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 15px;
+    color: #333;
+    outline: none;
+    background: #fff;
+  }
+  .filter-btn {
+    padding: 14px 16px;
+    background: #0073aa;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: 0.3s ease;
+  }
+  .filter-btn:hover {
+    background: #005f87;
+  }
+
+  /* Slider Styling */
+  .slider-container {
+    padding-top: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    overflow: visible;
+  }
+  .slider-wrapper { overflow: hidden; position: relative; }
+  .card-container { display: flex; gap: 30px; transition: transform 0.5s ease; }
+  .visa-card {
+    min-width: calc(25% - 22.5px);
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  /* Make slider arrows darker and larger */
+.arrow {
+  color: #000 !important;       /* Dark black color */
+  font-size: 28px !important;   /* Slightly larger arrows */
+  font-weight: 700 !important;  /* Bold look */
+}
+.arrow:hover,
+.arrow:focus,
+.arrow:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  background-color: #fff !important; /* keep background same */
+}
+
+  .visa-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.15); }
+  .card-image { width: 100%; height: 40vh!important; object-fit: cover; }
+  .card-content { padding: 20px; }
+  .visa-title { font-family:'Open Sans',sans-serif; font-size:20px; font-weight:600; color:#1a1a1a; margin:0 0 12px 0; }
+  .card-description { font-family:'Manrope',sans-serif; font-size:14px; color:#666; line-height:1.6; margin:0 0 16px 0; }
+  .card-footer { display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid #eee; }
+  .location, .rating { display:flex; align-items:center; gap:6px; font-family:'Manrope',sans-serif; font-size:13px; color:#444; }
+  .star { color:#ffa500; font-size:14px; }
+  .arrow { position:absolute; top:-60px; background:white; border:1px solid #e0e0e0; width:50px; height:58px; border-radius:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:10; transition:all 0.3s ease; }
+  .arrow:active { transform:scale(0.95); }
+  .arrow-left { right:75px; }
+  .arrow-right { right:5px; }
+  @media(max-width:1024px){ .visa-card{min-width:calc(33.333% - 20px);} }
+  @media(max-width:768px){ .visa-card{min-width:calc(50% - 15px);} }
+  @media(max-width:480px){ .visa-card{min-width:calc(100%);} .arrow{width:40px;height:40px;font-size:20px;top:-50px;} }
+  </style>
+
+  <?php return ob_get_clean();
+});
+
+
+// ===== 2️⃣ AJAX Function for Filtering =====
+add_action('wp_ajax_filter_posts_slider', 'filter_posts_slider_callback');
+add_action('wp_ajax_nopriv_filter_posts_slider', 'filter_posts_slider_callback');
+
+function filter_posts_slider_callback() {
+  $cat_id  = isset($_POST['category']) ? intval($_POST['category']) : '';
+  $country = isset($_POST['country']) ? sanitize_text_field($_POST['country']) : '';
+
+  $meta_query = array();
+  if ($country) {
+    $meta_query[] = array(
+      'key'     => 'country',
+      'value'   => $country,
+      'compare' => 'LIKE',
+    );
+  }
+
+  $args = array(
+    'post_type'      => 'post',
+    'posts_per_page' => 8,
+    'meta_query'     => $meta_query,
+  );
+  if ($cat_id) {
+    $args['cat'] = $cat_id;
+  }
+
+  $query = new WP_Query($args);
+  if ($query->have_posts()):
+    while ($query->have_posts()): $query->the_post();
+      $thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
+      $category = get_the_category();
+      $cat_name = !empty($category) ? esc_html($category[0]->name) : 'Uncategorized'; ?>
+      <div class="visa-card">
+        <img src="<?php echo esc_url($thumbnail ?: 'https://via.placeholder.com/400x250'); ?>" alt="<?php the_title_attribute(); ?>" class="card-image">
+        <div class="card-content">
+          <h2 class="visa-title"><?php the_title(); ?></h2>
+          <p class="card-description"><?php echo wp_trim_words(get_the_excerpt(), 15, '...'); ?></p>
+          <div class="card-footer">
+            <div class="location">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <span><?php echo $cat_name; ?></span>
+            </div>
+            <div class="rating"><span class="star">⭐</span><span>4.3</span></div>
+          </div>
+        </div>
+      </div>
+  <?php endwhile; wp_reset_postdata();
+  else:
+    echo '<p>No posts found.</p>';
+  endif;
+
+  wp_die(); // ✅ important to stop page reload / redirect
+}
+
+
+
+
+
+
+//testing code 
+// Create form link when order is created + log link details in custom file
+add_action('woocommerce_checkout_update_order_meta', 'create_form_link_and_log');
+
+function create_form_link_and_log($order_id) {
+    if (!$order_id) return;
+
+    // Generate unique link
+    $unique_link = site_url('/custom-form?order_id=' . $order_id . '&key=' . md5($order_id . time()));
+
+    // Save link to order meta
+    update_post_meta($order_id, '_generated_form_link', $unique_link);
+
+    // Make a log entry
+    $log_entry = "[" . date("Y-m-d H:i:s") . "] Order ID: $order_id | Link: $unique_link" . PHP_EOL;
+
+    // Create or update custom log file
+    $log_file = WP_CONTENT_DIR . '/form-links-log.txt';
+    file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
+}
+
+// Add column in admin orders list
+add_filter('manage_edit-shop_order_columns', 'add_form_link_column_custom');
+function add_form_link_column_custom($columns) {
+    $columns['form_link'] = 'Form Link';
+    return $columns;
+}
+
+// Show form link in the column
+add_action('manage_shop_order_posts_custom_column', 'show_form_link_column_custom');
+function show_form_link_column_custom($column) {
+    global $post;
+    if ($column === 'form_link') {
+        $link = get_post_meta($post->ID, '_generated_form_link', true);
+        if ($link) {
+            echo '<a href="' . esc_url($link) . '" target="_blank">Open Form</a>';
+        } else {
+            echo '<em>No Link</em>';
+        }
+    }
+}
+
+
+
+
+
+
+
+// ===== 1️⃣ Shortcode for the Filter Form =====
+add_shortcode('post_filter_form', function() {
+    ob_start(); ?>
+
+    <!-- Filter Form -->
+    <div class="filter-bar" style="margin-bottom:20px; display:flex; gap:10px; align-items:center;">
+      
+      <!-- Category Dropdown -->
+      <select id="filterCategory">
+        <option value="">All Categories</option>
+        <?php
+        $categories = get_terms(array(
+          'taxonomy'   => 'category',
+          'hide_empty' => false,
+        ));
+
+        if (!empty($categories) && !is_wp_error($categories)) {
+          foreach ($categories as $cat) {
+            echo '<option value="' . esc_attr($cat->term_id) . '">' . esc_html($cat->name) . '</option>';
+          }
+        }
+        ?>
+      </select>
+
+      <!-- Country Dropdown -->
+      <select id="filterCountry">
+        <option value="">All Countries</option>
+        <option value="USA">USA</option>
+        <option value="UK">UK</option>
+        <option value="Canada">Canada</option>
+        <option value="Turkey">Turkey</option>
+      </select>
+
+      <button id="filterBtn" style="padding:15px 15px; background:#0073aa; color:white; border:none; border-radius:25px; cursor:pointer;">
+        <i class="fa fa-search" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <!-- Empty container for AJAX results -->
+    <div id="cardContainer" class="filter-results"></div>
+
+    <script>
+    document.getElementById('filterBtn').addEventListener('click', function() {
+      const cat = document.getElementById('filterCategory').value;
+      const country = document.getElementById('filterCountry').value;
+
+      const data = new FormData();
+      data.append('action', 'filter_posts');
+      data.append('category', cat);
+      data.append('country', country);
+
+      // Show loading text
+      document.getElementById('cardContainer').innerHTML = '<p>Loading...</p>';
+
+      fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+        method: 'POST',
+        body: data
+      })
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('cardContainer').innerHTML = html;
+      });
+    });
+    </script>
+
+    <?php
+    return ob_get_clean();
+});
+
+
+// ===== 2️⃣ AJAX Function to Filter Posts =====
+add_action('wp_ajax_filter_posts', 'custom_filter_posts');
+add_action('wp_ajax_nopriv_filter_posts', 'custom_filter_posts');
+
+function custom_filter_posts() {
+    $cat_id  = isset($_POST['category']) ? intval($_POST['category']) : '';
+    $country = isset($_POST['country']) ? sanitize_text_field($_POST['country']) : '';
+
+    $meta_query = array();
+
+    if ($country) {
+        $meta_query[] = array(
+            'key'     => 'country', // assuming you have custom field 'country'
+            'value'   => $country,
+            'compare' => 'LIKE',
+        );
+    }
+
+    $args = array(
+        'post_type'      => 'post',
+        'posts_per_page' => 6,
+        'meta_query'     => $meta_query,
+    );
+
+    if ($cat_id) {
+        $args['cat'] = $cat_id;
+    }
+
+    $query = new WP_Query($args);
+
+    if ($query->have_posts()) :
+        while ($query->have_posts()) : $query->the_post(); ?>
+            <div class="post-card" style="border:1px solid #eee; padding:10px; border-radius:8px; margin-bottom:10px;">
+              <h3><?php the_title(); ?></h3>
+              <p><?php echo wp_trim_words(get_the_excerpt(), 20); ?></p>
+            </div>
+        <?php endwhile;
+        wp_reset_postdata();
+    else :
+        echo '<p>No posts found.</p>';
+    endif;
+
+    wp_die();
+}
