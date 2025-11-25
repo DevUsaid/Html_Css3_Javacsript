@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>grid layout</title>
+
+    <style>
+        *{
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        /* //display: grid
+
+         grid-template-columns
+
+         grid-template-rows
+
+         grid-auto-rows
+
+         grid-auto-flow
+
+         gap / row-gap / column-gap
+
+         justify-content
+
+         align-content
+         
+         justify-items
+
+         align-items
+
+         place-content
+
+         place-items
+
+        grid-template-areas// */
+
+        /* border (styling)
+
+        height / width (optional layout control) */
+
+        .grid_container{
+            display: grid;
+            gap: 20px;
+            height: 900px;
+            grid-template-columns: 200px 200px 200px 200px;
+            grid-template-rows: 90px 90px 90px 90px;
+            grid-auto-rows: 150px;
+            justify-content:center ;
+            align-content: center;
+            border: 1px solid red;
+        }
+
+
+          /* Ye wo properties hain jo har box ki position & size control karti hain:
+
+          grid-column
+
+          grid-column-start
+
+          grid-column-end
+
+          grid-row
+
+          grid-row-start
+
+          grid-row-end
+
+          grid-area
+
+          justify-self
+
+          align-self
+
+          place-self
+
+          order (grid flow order change karne ke liye)
+
+          z-index (agar overlap ho) */
+
+
+        .box{
+            border: 1px solid #333;
+            padding: 20px;
+        }
+
+        #box1{
+            background-color: bisque;
+            grid-row: 1/4;
+        }
+        #box2{
+            background-color: red;
+            grid-column: 2/4;
+            grid-row: span 0;
+        }
+        
+        #box3{
+            background-color: greenyellow;
+            
+        }
+        
+        #box4{
+            background-color: yellow;
+        }
+
+        #box5{
+            background-color: tomato;
+        }
+       
+        #box6{
+                grid-row: span 2;
+                background-color: aqua;
+            }
+
+         #box7{
+            background-color: aqua;
+         }   
+
+         #box8{
+            background-color: violet;
+         }
+        
+    </style>
+</head>
+
+<body>
+    <div class="grid_container">
+        <div class="box" id="box1">box 1</div>
+        <div class="box" id="box2">box 2</div>
+        <div class="box" id="box3">box 3</div>
+        <div class="box" id="box4">box 4</div>
+        <div class="box" id="box5">box 5</div>
+        <div class="box" id="box6">box 6</div>
+        <div class="box" id="box7">box 7</div>
+        <div class="box" id="box8">box 8</div>
+        <!-- <div class="box" id="box9">box 9</div> -->
+        <!-- <div class="box" id="box10">box 10</div> -->
+        <!-- <div class="box" id="box11">box 11</div>
+        <div class="box" id="box12">box 12</div> -->
+    </div>
+</body>
+</html>
